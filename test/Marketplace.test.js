@@ -1,3 +1,5 @@
+const { assert } = require('chai');
+
 /* eslint-disable no-undef */
 const Marketplace = artifacts.require('./Marketplace.sol')
 
@@ -30,10 +32,10 @@ contract('Marketplace', ([deployer, seller, buyer]) => {
             productCount = await marketplace.productCount();
         })
 
-        it('if product is created then createProduct increments product count', async () => {
+        it('creates product then createProduct increments product count', async () => {
             assert.equal(productCount, 1);
         })
-        it('if product is created then createProduct emits correct data', async () => {
+        it('creates product then createProduct emits correct data', async () => {
             const event = result.logs[0].args;
 
             assert.equal(event.id.toNumber(), productCount.toNumber(), 'id is correct')
@@ -42,12 +44,54 @@ contract('Marketplace', ([deployer, seller, buyer]) => {
             assert.equal(event.owner, seller, 'owner is correct')
             assert.equal(event.purchased, false, 'purchased is correct')
         })
-        it('createProduct is given an invalid name, no product is created', async () => {
+        it('is given an invalid name, no product is created', async () => {
             await marketplace.createProduct('', web3.utils.toWei('1'), { from: seller }).should.be.rejected;
         })
-        it('createProduct is given an invalid price, no product is created', async () => {
+        it('is given an invalid price, no product is created', async () => {
             await marketplace.createProduct('Macbook', null, { from: seller }).should.be.rejected;
             await marketplace.createProduct('Macbook', 0, { from: seller }).should.be.rejected;
+        })
+        it('lists created product', async () => {
+            const product = await marketplace.products(productCount);
+
+            assert.equal(product.id.toNumber(), productCount.toNumber(), 'id is correct')
+            assert.equal(product.name, 'Macbook', 'name is correct')
+            assert.equal(product.price, '1000000000000000000', 'price is correct')
+            assert.equal(product.owner, seller, 'owner is correct')
+            assert.equal(product.purchased, false, 'purchased is correct')
+        })
+        it('sells a product', async () => {
+            let sellerBalancePriorToPurchase = await web3.eth.getBalance(seller);
+            sellerBalancePriorToPurchase = new web3.utils.BN(sellerBalancePriorToPurchase);
+
+            result = await marketplace.purhcaseProduct(productCount, { from: buyer, value: web3.utils.toWei('1', 'Ether') })
+            
+            let sellerBalanceAfterPurchase = await web3.eth.getBalance(seller);
+            sellerBalanceAfterPurchase  = new web3.utils.BN(sellerBalanceAfterPurchase);
+
+            let price = web3.utils.toWei('1', 'Ether');
+            price = new web3.utils.BN(price);
+
+            let actualBalance = sellerBalanceAfterPurchase.toString();
+            let expectedBalance = sellerBalancePriorToPurchase.add(price).toString();
+
+            const event = result.logs[0].args;
+
+            assert.equal(event.id.toNumber(), productCount.toNumber(), 'id is correct')
+            assert.equal(event.name, 'Macbook', 'name is correct')
+            assert.equal(event.price, '1000000000000000000', 'price is correct')
+            assert.equal(event.owner, buyer, 'owner is correct')
+            assert.equal(event.purchased, true, 'purchased is correct')
+            assert.equal(actualBalance, expectedBalance);
+        })
+        it('does not sell a product that Id does not exist', async () => {
+            await marketplace.purhcaseProduct(99, { from: buyer, value: web3.utils.toWei('1', 'Ether') }).should.be.rejected;
+        })
+        it('does not sell product when sender did not send enough funds', async () => {
+            await marketplace.purhcaseProduct(productCount, { from: buyer, value: web3.utils.toWei('.01', 'Ether') }).should.be.rejected;
+        })
+        it('does not sell product that has been purchased', async () => {
+            await marketplace.purhcaseProduct(productCount, { from: deployer, value: web3.utils.toWei('1', 'Ether') }).should.be.rejected;
         })
     });
 
