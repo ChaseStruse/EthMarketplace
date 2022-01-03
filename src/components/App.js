@@ -3,6 +3,7 @@ import './App.css';
 import Web3 from 'web3'
 import Marketplace from '../abis/Marketplace.json'
 import Navbar from './Navbar';
+import Main from './Main';
 
 class App extends Component {
 
@@ -35,6 +36,8 @@ class App extends Component {
 
     if(networkData){
       const marketplace = new web3.eth.Contract(Marketplace.abi, networkData.address);
+      this.setState({marketplace});
+      this.setState({loading: false});
     }
     else{
       window.alert('Marketplace contract is not deployed to detected network');
@@ -57,8 +60,10 @@ class App extends Component {
         <Navbar account={this.state.account}/>
         <div className="container-fluid mt-5">
           <div className="row">
-            <main role="main" className="col-lg-12 d-flex text-center">
-              
+            <main role="main" className="col-lg-12 d-flex">
+              {this.state.loading 
+                ? <div id="loader" className='text-center'><p className='text-center'>Loading...</p></div>
+                : <Main />}
             </main>
           </div>
         </div>
