@@ -45,7 +45,7 @@ contract Marketplace {
         emit ProductCreated(productCount, _name, _price, msg.sender, false);
     }
 
-    function purhcaseProduct (uint _id) public payable {
+    function purchaseProduct (uint _id) public payable {
         require(_id > 0 && _id <= productCount);
         Product memory _product = products[_id];
         require(_product.price <= msg.value);
